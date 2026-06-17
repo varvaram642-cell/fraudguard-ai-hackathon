@@ -1,6 +1,8 @@
+import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 from src.database.db_client import DatabaseClient
+from src.core.ai_processor import KodikAIProcessor
 
 class AbstractHandler(ABC):
     _next_handler: Optional['AbstractHandler'] = None
@@ -16,7 +18,7 @@ class AbstractHandler(ABC):
     def _pass_to_next(self, transaction_data: Dict[str, Any]) -> Dict[str, Any]:
         if self._next_handler:
             return self._next_handler.handle(transaction_data)
-        return {"approved": True, "reason": "Одобрено"}
+        return {"approved": True, "reason": "Одобрено", "risk_level": "LOW_RISK"}
 
 
 class BlacklistHandler(AbstractHandler):
@@ -28,10 +30,9 @@ class BlacklistHandler(AbstractHandler):
         telegram_id = str(transaction_data.get("telegram_id"))
 
         if card_hash and self.db.is_blacklisted("card", card_hash):
-            return {"approved": False, "reason": "Карта находится в черном списке."}
-
+            return {"approved": False, "reason": "Карта находится в черном списке.", "risk_level": "HIGH_RISK"}
         if telegram_id and self.db.is_blacklisted("user", telegram_id):
-            return {"approved": False, "reason": "Пользователь находится в черном списке."}
+            return {"approved": False, "reason": "Пользователь находится в черном списке.", "risk_level": "HIGH_RISK"}
 
         return self._pass_to_next(transaction_data)
 
@@ -43,7 +44,7 @@ class LimitHandler(AbstractHandler):
     def handle(self, transaction_data: Dict[str, Any]) -> Dict[str, Any]:
         amount = transaction_data.get("amount", 0.0)
         if amount > self.limit:
-            return {"approved": False, "reason": f"Превышен разовый лимит ({amount} > {self.limit})."}
+            return {"approved": False, "reason": f"Превышен разовый лимит ({amount} > {self.limit}).", "risk_level": "HIGH_RISK"}
         return self._pass_to_next(transaction_data)
 
 
@@ -62,7 +63,8 @@ class FrequencyHandler(AbstractHandler):
         if recent_count >= self.max_count:
             return {
                 "approved": False, 
-                "reason": f"Аномальная частота запросов: {recent_count + 1} транзакций за {self.window_size} сек."
+                "reason": f"Аномальная частота запросов: {recent_count + 1} транзакций за {self.window_size} сек.",
+                "risk_level": "HIGH_RISK"
             }
 
         return self._pass_to_next(transaction_data)
@@ -82,7 +84,21 @@ class GraphHandler(AbstractHandler):
         if unique_users > self.threshold:
             return {
                 "approved": False, 
-                "reason": f"Карта скомпрометирована (привязана к {unique_users} уникальным аккаунтам)."
+                "reason": f"Карта скомпрометирована (привязана к {unique_users} уникальным аккаунтам).",
+                "risk_level": "HIGH_RISK"
             }
 
+        return self._pass_to_next(transaction_data)
+
+
+class AIChecker(AbstractHandler):
+    def __init__(self, ai_processor: KodikAIProcessor):
+        self.ai_processor = ai_processor
+        
+    def handle(self, transaction_data: Dict[str, Any]) -> Dict[str, Any]:
+        ai_result = self.ai_processor.analyze(transaction_data)
+        
+        if not ai_result["approved"]:
+            return ai_result
+        
         return self._pass_to_next(transaction_data)
