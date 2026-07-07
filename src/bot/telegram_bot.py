@@ -27,11 +27,11 @@ class FraudGuardBot:
 
     def send_welcome(self, message: types.Message) -> None:
         welcome_text = (
-            "🛡️ **Добро пожаловать в FraudGuard AI!**\n\n"
+            "🛡️ Добро пожаловать в FraudGuard AI!\n\n"
             "Я интеллектуальный бот-помощник для детекции мошеннических транзакций.\n\n"
-            "📌 **Доступные команды:**\n"
-            "• `/report @username` — пожаловаться на пользователя\n"
-            "• `/start` — главное меню\n\n"
+            "📌 Доступные команды:\n"
+            "• /report @username — пожаловаться на пользователя\n"
+            "• /start — главное меню\n\n"
             "Выберите нужное действие ниже:"
         )
         
@@ -40,12 +40,12 @@ class FraudGuardBot:
         btn_info = types.InlineKeyboardButton("ℹ️ О системе антифрода", callback_data="system_info")
         markup.add(btn_check, btn_info)
         
-        self.bot.send_message(message.chat.id, welcome_text, parse_mode="Markdown", reply_markup=markup)
+        self.bot.send_message(message.chat.id, welcome_text, reply_markup=markup)
 
     def handle_report_command(self, message: types.Message) -> None:
         args: list[str] = message.text.split()
         if len(args) < 2:
-            self.bot.reply_to(message, "❌ Укажите username. Пример: `/report @ivan`", parse_mode="Markdown")
+            self.bot.reply_to(message, "❌ Укажите username. Пример: /report @ivan")
             return
         
         username: str = args[1].lstrip("@")
@@ -67,9 +67,8 @@ class FraudGuardBot:
             else:
                 self.bot.send_message(
                     message.chat.id,
-                    f"🚨 **Жалоба подтверждена!**\n⚠️ @{username} идентифицирован как фрод.\n"
-                    f"Причина: {result['reason']}. Действия заблокированы.",
-                    parse_mode="Markdown"
+                    f"🚨 Жалоба подтверждена!\n⚠️ @{username} идентифицирован как фрод.\n"
+                    f"Причина: {result['reason']}. Действия заблокированы."
                 )
         except Exception as e:
             logger.error(f"Ошибка проверки жалобы для {username}: {e}", exc_info=True)
@@ -84,13 +83,13 @@ class FraudGuardBot:
         elif call.data == "system_info":
             self.bot.answer_callback_query(call.id)
             info_text = (
-                "⚙️ **Как работает защита:**\n"
+                "⚙️ Как работает защита:\n"
                 "1. Анализ лимитов: Блокировка разовых переводов выше нормы.\n"
                 "2. Скользящее окно: Отслеживание аномально частых транзакций.\n"
                 "3. Графовый анализ: Выявление связей карты с множеством аккаунтов.\n"
                 "4. Черный список: Глобальная блокировка карт и пользователей."
             )
-            self.bot.send_message(call.message.chat.id, info_text, parse_mode="Markdown")
+            self.bot.send_message(call.message.chat.id, info_text)
 
     def process_amount_step(self, message: types.Message) -> None:
         try:
@@ -129,20 +128,20 @@ class FraudGuardBot:
             result = self.engine.check_transaction(data)
             if result["approved"]:
                 response = (
-                    f"✅ **ТРАНЗАКЦИЯ ОДОБРЕНА**\n\n"
+                    f"✅ ТРАНЗАКЦИЯ ОДОБРЕНА\n\n"
                     f"💵 Сумма: {data['amount']:.2f} руб.\n"
                     f"💳 Карта: {data['card_hash']}\n"
                     "🛡️ Безопасность: Угроз не обнаружено."
                 )
             else:
                 response = (
-                    f"🚨 **ВНИМАНИЕ: ОБНАРУЖЕН ФРОД!**\n\n"
+                    f"🚨 ВНИМАНИЕ: ОБНАРУЖЕН ФРОД!\n\n"
                     f"💵 Сумма: {data['amount']:.2f} руб.\n"
                     f"💳 Карта: {data['card_hash']}\n"
                     f"⚠️ Причина блокировки: {result['reason']}"
                 )
             
-            self.bot.send_message(chat_id, response, parse_mode="Markdown")
+            self.bot.send_message(chat_id, response)
         except Exception as e:
             logger.error(f"Ошибка скоринга транзакции для чата {chat_id}: {e}", exc_info=True)
             self.bot.send_message(chat_id, "❌ Не удалось завершить проверку из-за внутренней ошибки сервера.")
