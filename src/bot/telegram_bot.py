@@ -29,61 +29,61 @@ class FraudGuardBot:
         welcome_text = (
             "🛡️ Добро пожаловать в FraudGuard AI!\n\n"
             "Я интеллектуальный бот-помощник для детекции мошеннических транзакций.\n\n"
-            "📌 Доступные команды:\n"
-            "• /report @username — пожаловаться на пользователя\n"
-            "• /start — главное меню\n\n"
+            "Доступные команды:\n"
+            "/report @username — пожаловаться на пользователя\n"
+            "/start — главное меню\n\n"
             "Выберите нужное действие ниже:"
         )
         
         markup = types.InlineKeyboardMarkup(row_width=1)
-        btn_check = types.InlineKeyboardButton("🔍 Проверить транзакцию", callback_data="check_tx")
-        btn_info = types.InlineKeyboardButton("ℹ️ О системе антифрода", callback_data="system_info")
+        btn_check = types.InlineKeyboardButton("Проверить транзакцию", callback_data="check_tx")
+        btn_info = types.InlineKeyboardButton("О системе антифрода", callback_data="system_info")
         markup.add(btn_check, btn_info)
         
         self.bot.send_message(message.chat.id, welcome_text, reply_markup=markup)
 
     def handle_report_command(self, message: types.Message) -> None:
-        args: list[str] = message.text.split()
+        args = message.text.split()
         if len(args) < 2:
-            self.bot.reply_to(message, "❌ Укажите username. Пример: /report @ivan")
+            self.bot.reply_to(message, "Укажите username. Пример: /report @ivan")
             return
         
-        username: str = args[1].lstrip("@")
-        transaction_data: Dict[str, Any] = {
+        username = args[1].lstrip("@")
+        transaction_data = {
             "amount": 10000.0,
             "card_hash": f"card_{username}_report",
             "telegram_id": message.from_user.id
         }
         
-        self.bot.reply_to(message, f"🔍 Проверяю пользователя @{username} в реестре угроз...")
+        self.bot.reply_to(message, f"Проверяю пользователя @{username} в реестре угроз...")
         
         try:
-            result: Dict[str, Any] = self.engine.check_transaction(transaction_data)
+            result = self.engine.check_transaction(transaction_data)
             if result["approved"]:
                 self.bot.send_message(
                     message.chat.id,
-                    f"✅ Жалоба на @{username} проверена. Подозрительной активности не обнаружено."
+                    f"Жалоба на @{username} проверена. Подозрительной активности не обнаружено."
                 )
             else:
                 self.bot.send_message(
                     message.chat.id,
-                    f"🚨 Жалоба подтверждена!\n⚠️ @{username} идентифицирован как фрод.\n"
+                    f"Жалоба подтверждена! @{username} идентифицирован как фрод.\n"
                     f"Причина: {result['reason']}. Действия заблокированы."
                 )
         except Exception as e:
             logger.error(f"Ошибка проверки жалобы для {username}: {e}", exc_info=True)
-            self.bot.send_message(message.chat.id, "❌ Произошла внутренняя ошибка при проверке жалобы.")
+            self.bot.send_message(message.chat.id, "Произошла внутренняя ошибка при проверке жалобы.")
 
     def handle_callbacks(self, call: types.CallbackQuery) -> None:
         if call.data == "check_tx":
             self.bot.answer_callback_query(call.id)
-            msg = self.bot.send_message(call.message.chat.id, "💰 Шаг 1/2: Введите сумму транзакции (число):")
+            msg = self.bot.send_message(call.message.chat.id, "Шаг 1/2: Введите сумму транзакции (число):")
             self.bot.register_next_step_handler(msg, self.process_amount_step)
             
         elif call.data == "system_info":
             self.bot.answer_callback_query(call.id)
             info_text = (
-                "⚙️ Как работает защита:\n"
+                "Как работает защита:\n"
                 "1. Анализ лимитов: Блокировка разовых переводов выше нормы.\n"
                 "2. Скользящее окно: Отслеживание аномально частых транзакций.\n"
                 "3. Графовый анализ: Выявление связей карты с множеством аккаунтов.\n"
@@ -95,21 +95,21 @@ class FraudGuardBot:
         try:
             amount = float(message.text)
             self.user_states[message.chat.id] = {"amount": amount}
-            msg = self.bot.send_message(message.chat.id, "💳 Шаг 2/2: Введите хэш карты (например: card_123):")
+            msg = self.bot.send_message(message.chat.id, "Шаг 2/2: Введите хэш карты (например: card_123):")
             self.bot.register_next_step_handler(msg, self.process_card_step)
         except ValueError:
-            msg = self.bot.send_message(message.chat.id, "❌ Ошибка: Введите числовое значение суммы!")
+            msg = self.bot.send_message(message.chat.id, "Ошибка: Введите числовое значение суммы!")
             self.bot.register_next_step_handler(msg, self.process_amount_step)
 
     def process_card_step(self, message: types.Message) -> None:
         card_hash = message.text.strip() if message.text else ""
         if not card_hash:
-            msg = self.bot.send_message(message.chat.id, "❌ Карта не может быть пустой. Попробуйте еще раз:")
+            msg = self.bot.send_message(message.chat.id, "Карта не может быть пустой. Попробуйте еще раз:")
             self.bot.register_next_step_handler(msg, self.process_card_step)
             return
         
         if message.chat.id not in self.user_states:
-            self.bot.send_message(message.chat.id, "❌ Время сессии истекло. Начните сначала: /start")
+            self.bot.send_message(message.chat.id, "Время сессии истекло. Начните сначала: /start")
             return
         
         self.user_states[message.chat.id]["card_hash"] = card_hash
@@ -119,32 +119,32 @@ class FraudGuardBot:
     def execute_fraud_check(self, chat_id: int) -> None:
         data = self.user_states.get(chat_id)
         if not data:
-            self.bot.send_message(chat_id, "❌ Ошибка сессии. Начните сначала: /start")
+            self.bot.send_message(chat_id, "Ошибка сессии. Начните сначала: /start")
             return
         
-        self.bot.send_message(chat_id, "🔄 Запущен скоринг транзакции в системе безопасности...")
+        self.bot.send_message(chat_id, "Запущен скоринг транзакции в системе безопасности...")
         
         try:
             result = self.engine.check_transaction(data)
             if result["approved"]:
                 response = (
-                    f"✅ ТРАНЗАКЦИЯ ОДОБРЕНА\n\n"
-                    f"💵 Сумма: {data['amount']:.2f} руб.\n"
-                    f"💳 Карта: {data['card_hash']}\n"
-                    "🛡️ Безопасность: Угроз не обнаружено."
+                    f"ТРАНЗАКЦИЯ ОДОБРЕНА\n\n"
+                    f"Сумма: {data['amount']:.2f} руб.\n"
+                    f"Карта: {data['card_hash']}\n"
+                    "Безопасность: Угроз не обнаружено."
                 )
             else:
                 response = (
-                    f"🚨 ВНИМАНИЕ: ОБНАРУЖЕН ФРОД!\n\n"
-                    f"💵 Сумма: {data['amount']:.2f} руб.\n"
-                    f"💳 Карта: {data['card_hash']}\n"
-                    f"⚠️ Причина блокировки: {result['reason']}"
+                    f"ВНИМАНИЕ: ОБНАРУЖЕН ФРОД!\n\n"
+                    f"Сумма: {data['amount']:.2f} руб.\n"
+                    f"Карта: {data['card_hash']}\n"
+                    f"Причина блокировки: {result['reason']}"
                 )
             
             self.bot.send_message(chat_id, response)
         except Exception as e:
             logger.error(f"Ошибка скоринга транзакции для чата {chat_id}: {e}", exc_info=True)
-            self.bot.send_message(chat_id, "❌ Не удалось завершить проверку из-за внутренней ошибки сервера.")
+            self.bot.send_message(chat_id, "Не удалось завершить проверку из-за внутренней ошибки сервера.")
         finally:
             self.user_states.pop(chat_id, None)
 
@@ -154,9 +154,9 @@ class FraudGuardBot:
 
 
 if __name__ == "__main__":
-    BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "8886674211:AAFVinbilsy8L36OPTBrPwn_TltEGpZxPlc")
+    BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8886674211:AAFVinbilsy8L36OPTBrPwn_TltEGpZxPlc")
     
-    db: DatabaseClient = DatabaseClient()
+    db = DatabaseClient()
     
     try:
         db.initialize_schema()
@@ -165,6 +165,6 @@ if __name__ == "__main__":
         logger.critical(f"Ошибка инициализации схемы БД: {e}", exc_info=True)
         raise
     
-    engine: FraudEngine = FraudEngine(db=db)
-    bot_app: FraudGuardBot = FraudGuardBot(token=BOT_TOKEN, engine=engine)
+    engine = FraudEngine(db=db)
+    bot_app = FraudGuardBot(token=BOT_TOKEN, engine=engine)
     bot_app.run()
