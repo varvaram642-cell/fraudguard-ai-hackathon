@@ -3,11 +3,22 @@ from typing import Dict, Any
 from fastapi import APIRouter, HTTPException, Depends
 from src.database.db_client import DatabaseClient
 from src.core.engine import FraudEngine
-from src.api.main import get_db_client, get_fraud_engine
 
 logger = logging.getLogger("APIRoutes")
 
 router = APIRouter(prefix="/api/v1", tags=["Fraud Detection"])
+
+def get_db_client() -> DatabaseClient:
+    from src.api.main import db_client_instance
+    if not db_client_instance:
+        raise HTTPException(status_code=500, detail="DatabaseClient не инициализирован")
+    return db_client_instance
+
+def get_fraud_engine() -> FraudEngine:
+    from src.api.main import fraud_engine_instance
+    if not fraud_engine_instance:
+        raise HTTPException(status_code=500, detail="FraudEngine не инициализирован")
+    return fraud_engine_instance
 
 @router.post(
     "/transactions/check",
