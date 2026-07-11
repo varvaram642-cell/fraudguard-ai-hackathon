@@ -157,13 +157,7 @@ if __name__ == "__main__":
     BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8886674211:AAFVinbilsy8L36OPTBrPwn_TltEGpZxPlc")
     
     db = DatabaseClient()
-    
-    try:
-        db.initialize_schema()
-        logger.info("Схема БД успешно инициализирована или уже существует.")
-    except Exception as e:
-        logger.critical(f"Ошибка инициализации схемы БД: {e}", exc_info=True)
-        raise
+    logger.info("DatabaseClient инициализирован (демо-режим, БД не используется)")
     
     engine = FraudEngine(db=db)
     bot_app = FraudGuardBot(token=BOT_TOKEN, engine=engine)
