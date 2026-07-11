@@ -34,14 +34,6 @@ class FraudEngine:
         # Прогон по цепочке валидаторов
         result = self.entry_point.handle(transaction_data)
         
-        # Безопасное логирование транзакции в PostgreSQL
-        try:
-            self.db.save_transaction(
-                tx_data=transaction_data,
-                is_approved=result["approved"],
-                reason=result["reason"]
-            )
-        except Exception as e:
-            logger.error(f"Критическая ошибка сохранения транзакции в БД: {e}", exc_info=True)
+        # Сохранение в БД отключено для демо-версии (база не требуется)
         
         return result
