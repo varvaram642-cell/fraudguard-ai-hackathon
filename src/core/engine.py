@@ -1,7 +1,8 @@
 import logging
 from typing import Any, Dict
 from src.database.db_client import DatabaseClient
-from src.core.checkers import BlacklistHandler, LimitHandler, FrequencyHandler, GraphHandler
+from src.core.checkers import BlacklistHandler, LimitHandler, FrequencyHandler, GraphHandler, AIChecker
+from src.core.ai_processor import KodikAIProcessor
 
 logger = logging.getLogger("FraudEngine")
 
@@ -15,8 +16,13 @@ class FraudEngine:
         limit_handler = LimitHandler(limit=limit)
         frequency_handler = FrequencyHandler(db=self.db, window_size=window_size, max_count=max_count)
         graph_handler = GraphHandler(db=self.db, threshold=graph_threshold)
+        
+        # Добавляем AI-чеккер
+        ai_processor = KodikAIProcessor()
+        ai_handler = AIChecker(ai_processor)
 
-        blacklist_handler.set_next(limit_handler).set_next(frequency_handler).set_next(graph_handler)
+        # Собираем цепочку: Blacklist → Limit → Frequency → Graph → AI
+        blacklist_handler.set_next(limit_handler).set_next(frequency_handler).set_next(graph_handler).set_next(ai_handler)
         
         self.entry_point = blacklist_handler
 
